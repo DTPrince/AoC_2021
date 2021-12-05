@@ -7,6 +7,7 @@
 use std::fmt::Display;
 use std::fs::{File, read};
 use std::io::{Error, BufReader, BufRead};
+use std::{collections::BTreeSet};   // A smart man once told me "You're using the wrong tool for the job" aka vectors for everything
 
 fn read_input() -> Result<Vec<String>, Error> {
     let path = "./input/input.txt";
@@ -58,47 +59,75 @@ fn find_gamma_epsilon(fcontents: &Vec<String>) -> (i32, i32){
 // checks for number of 1s. Returns true for half or more, false for less than half.
 // aka true  = 1 majority
 //     false = 0 majority
-fn find_most_common(list: &Vec<String>, position: usize) -> u8 {
-    let mut sum = 0;
-    for number in list.clone() {
-        if number.as_bytes()[position] == '1' as u8 {
-            sum = sum + 1;
+fn find_most_common(list: &Vec<String>, position: usize) -> char {
+    // dividing rounds down so it was HIGHLY favoring 1 results. Just going to count both like a peanut brain
+    let mut sum_1 = 0;
+    let mut sum_0 = 0;
+    for number in list {
+        if number.chars().nth(position).unwrap() == '1' {
+            sum_1 = sum_1 + 1;
+        } else {
+            sum_0 = sum_0 + 1;
         }
     }
-    if sum  >= (list.len() / 2) {
-        return 1;
+    if sum_1  >= sum_0 {
+        return '1';
     }
-    0
+    '0'
 }
 
-fn find_o2(fcontent: &Vec<String>) -> i32 {
+fn find_o2(fcontent: &Vec<String>) -> String {
     // just gonna clone and remove all wrong results for easy looping.
     let mut pile_o_shit = fcontent.clone();
-    //could do an early break, we'll see how that looks
-    let width = fcontent.iter().peekable().len(); // 4 in example input
+    //could do an early break, we'll see how that looksugly
+    let width = pile_o_shit.first().unwrap().len();
     let mut position_key: usize = 0;
 
-        for position in 0..width {
-            let common = find_most_common(&pile_o_shit, position_key);
+        for _ in 0..width {
+            let most_common = find_most_common(&pile_o_shit, position_key);
 
-            // have to remove indexes after loop because length is loop count
-            let mut trimmings : Vec<usize> = Vec::new();
-
-            for line in pile_o_shit {
-                if line.as_bytes()[position_key] != common {
-                    pile_o_shit.pop();
+            let mut illegals: BTreeSet<String> = BTreeSet::new();
+            for line in &pile_o_shit {
+                // println!("Line {}, key: {}, common: {}, line[key]: {}", line, position_key, most_common, line.chars().nth(position_key).unwrap());
+                if line.chars().nth(position_key).unwrap() != most_common {
+                    illegals.insert(line.clone());
                 }
             }
-
-        position_key = position_key + 1;
+            if pile_o_shit.len() > 1 {
+                pile_o_shit.retain(|x| !illegals.contains(x));
+            }
+            position_key = position_key + 1;
         }
-    println!("Pile o shit length: {}, value: {}", pile_o_shit.len(), pile_o_shit.iter().next().unwrap());
-    0
+    println!("Pile o shit length: {}, value: {}", pile_o_shit.len(), pile_o_shit.first().unwrap());
+    pile_o_shit.iter().next().unwrap().clone()
+
 }
 
-fn find_co2(fcontent: &Vec<String>) -> i32 {
+fn find_co2(fcontent: &Vec<String>) -> String {
+    // just gonna clone and remove all wrong results for easy looping.
+    let mut pile_o_shit = fcontent.clone();
+    //could do an early break, we'll see how that looksugly
+    let width = pile_o_shit.first().unwrap().len();
+    let mut position_key: usize = 0;
 
-    0
+    for _ in 0..width {
+        let most_common = find_most_common(&pile_o_shit, position_key);
+
+        let mut illegals: BTreeSet<String> = BTreeSet::new();
+        for line in &pile_o_shit {
+            // println!("Line {}, key: {}, common: {}, line[key]: {}", line, position_key, most_common, line.chars().nth(position_key).unwrap());
+            if line.chars().nth(position_key).unwrap() == most_common {
+                illegals.insert(line.clone());
+            }
+        }
+        if pile_o_shit.len() > 1 {
+            pile_o_shit.retain(|x| !illegals.contains(x));
+        }
+        position_key = position_key + 1;
+    }
+    println!("Pile o shit length: {}, value: {}", pile_o_shit.len(), pile_o_shit.first().unwrap());
+    pile_o_shit.iter().next().unwrap().clone()
+
 }
 
 fn main() -> Result<(), Error> {
@@ -108,6 +137,10 @@ fn main() -> Result<(), Error> {
 
     let o2 = find_o2(&fcontents);
     let co2 = find_co2(&fcontents);
+
+    let num_o2 = i32::from_str_radix(o2.as_str(), 2).unwrap();
+    let num_co2 = i32::from_str_radix(co2.as_str(), 2).unwrap();
+    println!("o2 rating: {}, co2 rating: {}, life support rating: {}", o2, co2, num_o2*num_co2);
 
     Ok(())
 }
